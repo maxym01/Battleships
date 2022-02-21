@@ -1,0 +1,125 @@
+#include <iostream>
+#include "Player.h"
+#include "Entity.h"
+#include "Board.h"
+#define SIZE 14
+using namespace std;
+
+Player* set_player(Player* A, Player* B)
+{
+    char p;
+    cin >> p;
+    if (p == 'A')
+        return A;
+    else
+        return B;
+}
+
+int main()
+{
+    Player pA('A');
+    Player pB('B');
+    Player* turn = nullptr;
+    Board world(21, 10);
+    bool start = 0, next=0;
+
+    char command[SIZE];
+    while (cin >> command)
+    {
+        if (command[0] == '[' && command[1] == 's')
+        {
+            bool q = 1;
+            while (q)
+            {
+                cin >> command;
+                if (!strcmp(command, "BOARD_SIZE"))
+                {
+                    int h, w;
+                    cin >> h >> w;
+                    world.create_table(h, w);
+                }
+                if (!strcmp(command, "SET_FLEET"))
+                {
+                    char play;
+                    int car, bat, cru, des;
+                    cin >> play >> car >> bat >> cru >> des;
+                    if (play == 'A')
+                        turn = &pA;
+                    if (play == 'B')
+                        turn = &pB;
+                    turn->set_fleet(car, bat, cru, des);
+                    turn = nullptr;
+                }
+                if (!strcmp(command, "PRINT"))
+                {
+                    int x;
+                    cin >> x;
+                    world.print();
+                    world.count(&pA, &pB);
+                }
+                if (!strcmp(command, "SHIP"))
+                {
+                    turn = set_player(&pA, &pB);
+                    if (turn->get_ship() == nullptr)
+                        turn->set_fleet(1, 2, 3, 4);
+                    world.place_ship(turn->get_ship(), turn->get_sum(), 1, turn);
+                }
+                if (!strcmp(command, "NEXT_PLAYER"))
+                {
+                    turn = set_player(&pA, &pB);
+                    next = 1;
+                }
+                if (!strcmp(command, "INIT_POSITION"))
+                {
+                    turn = set_player(&pA, &pB);
+                    int y1, x1, y2, x2;
+                    cin >> y1 >> x1 >> y2 >> x2;
+                    for (int i = 0; i < turn->get_sum(); i++)
+                    {
+                        turn->get_ship()[i].set_val(y1, x1, y2, x2);
+                    }
+                }
+                if (!strcmp(command, "REEF"))
+                {
+                    int y, x;
+                    cin >> y >> x;
+                    Reef reef(y, x);
+                    world.place_reef(&reef);
+                }
+                if (command[0] == '[' && command[1] == 's')
+                    q = 0;
+            }
+        }
+        if (command[0] == '[' && command[7] == 'A' && (turn == nullptr || turn == &pB))
+        {
+            if (pA.get_ship() == nullptr)
+                pA.set_fleet(1, 2, 3, 4);
+            turn = &pA;
+            start = 0;
+        }
+        else if (command[0] == '[' && command[7] == 'B' && (turn == nullptr || turn == &pA))
+        {
+            if (pB.get_ship() == nullptr)
+                pB.set_fleet(1, 2, 3, 4);
+            turn = &pB;
+            start = 0;
+        }
+        else if (start && command[0] == '[' && command[1] == 'p')
+        {
+            cout << "INVALID OPERATION " << '"' << "[player" << command[7] << "] " << '"' << ": THE OTHER PLAYER EXPECTED";
+            exit(0);
+        }
+        else if ((command[0] == '[' && command[7] == 'A' && turn == &pA && next==0) || (command[0] == '[' && command[7] == 'B' && turn == &pB && next == 0))
+            start = 1;
+
+        if (!strcmp(command, "PLACE_SHIP"))
+            world.place_ship(turn->get_ship(), turn->get_sum(), 0, turn);
+        else if (!strcmp(command, "SHOOT"))
+            world.shoot(turn, &pA, &pB);
+        else if (!strcmp(command, "MOVE"))
+        {
+            world.move(turn->get_ship(), turn->get_sum(), turn);
+        }      
+    }
+    return 0;
+}
